@@ -1,0 +1,353 @@
+---
+title: "Individual responses to resistance training"
+subtitle: "What and Why?"
+author: "Daniel Hammarström"
+date: "2024-01-23"
+execute: 
+  warning: false
+  message: false
+  echo: false
+  fig-align: center
+format:
+  revealjs: 
+    theme: night
+editor_options: 
+  chunk_output_type: console
+---
+
+
+## Background: Muscle mass and strength
+
+:::: {.columns}
+
+::: {.column width="60%"}
+- Skeletal muscle is our largest organ:
+  - Interaction with our surrounding
+  - Glucose disposal
+  - Protein reservoir
+  - ...
+:::
+
+::: {.column width="40%"}
+<a title="Bouglé, Julien., Public domain, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:Bougle_whole2_retouched.png"><img width="512" alt="Bougle whole2 retouched" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Bougle_whole2_retouched.png/512px-Bougle_whole2_retouched.png"></a>
+:::
+
+::::
+
+
+## 
+
+```{r}
+#| fig-align: center
+
+library(ggdag); library(tidyverse)
+
+
+# A DAG for the role of muscle mass on outcome measures
+dag1 <- dagify(
+  # The form is effect ~ cause
+  M ~ A, 
+  A ~ Disease,
+  M ~ Diet,
+  M ~ Disease,
+  M ~ Age,
+  Disease ~ Age,
+  Diet ~ Age,
+  A ~ Diet,
+  A ~ Age,
+  M ~ Heritability,
+  S ~ Heritability,
+  A ~ Heritability,
+  S ~ Age,
+  Disease ~ Heritability,
+  S ~ M,
+  Ind ~ S,
+  S ~ A,
+  Ind ~ M,
+  Mort ~ M,
+  
+  
+  labels = c("M" = "Muscle mass", 
+             "A" = "Physical activity", 
+             "Age" = "Age",
+              "Diet" = "Diet",
+              "Disease" = "Disease",
+              "Age" = "Age",
+              "Heritability" = "Heritability",
+             "S" = "Muscle strength", 
+             "Ind" = "Physical independence",
+             "Mort" = "Mortality"
+             ),
+  # Optionally add coordinates to control the placement of the nodes on the DAG
+
+    coords = list(x = c(M = 2, S = 2.5,
+                        Diet = 1.75, Disease = 2.30, Age = 2, Heritability = 2.5, A = 2.15, 
+                        Ind = 1.9, Mort = 2.25), 
+                        y = c(M = 1, S = 0.7,
+                        Diet = 2.25, Disease = 2.25, Age = 3, Heritability = 3, A = 1.75, 
+                        Ind = 0.2, Mort = 0.2))
+  
+  
+)
+
+
+# Plot the dag called chain and print it to the screen
+p <- ggdag(dag1, use_labels = NULL, text = FALSE, edge_type = "diagonal", stylized = TRUE)
+
+p +
+  geom_label(aes(label = label)) +
+  
+  theme_dag()
+
+
+
+```
+
+
+## Muscle mass and strength are related to mortality and physical independence
+
+- Associations between muscle mass and strength and health are mainly observational
+- Interventions are difficult to do and evaluate the act of "changing guidelines"
+
+## Lean body mass, strength and heritability
+
+```{r}
+
+#| fig-cap: "Heritability of measures of strength and muscle mass. Data from Arden et al. 1997."
+library(tidyverse)
+
+## Data from Arden
+data.frame(Trait = c("Grip strength", "Leg extensor strength", "Lean body mass"), 
+           Heritability = c(0.36, 0.60, 0.56), 
+           lwr = c(0.03, 0.12, 0.24), 
+           upr = c(0.69, 1.08, 0.88)) %>%
+  ggplot(aes(Heritability, Trait)) + 
+  geom_point(shape = 21, size = 4, fill = "steelblue") + 
+  geom_errorbarh(aes(xmin = lwr, xmax = upr), height = 0) + 
+  theme(panel.grid = element_blank(), 
+        axis.title.y = element_blank()) 
+
+```
+
+## Genetic factors explain heritability
+
+- Several genetic markers (e.g. polymorphisms) have been implicated to explain population variation in lean mass and strength
+- E.g., 
+  - Thyrotropin-releasing hormone receptor &rarr; GH-IGF-axis
+  - ACTN3 &rarr; muscle sarcomere, contraction.
+  
+- Genetic factors are additive and/multiplicative. Why is this a good guess?
+
+## Genetics and modifiable factors
+- Although ~ 50% of strength and muscle mass comes from from parents
+- We have a ~ 50% window of opportunity!
+- Resistance training works!
+
+## Do individuals respond differently to resistance training?
+
+```{r}
+#| fig-cap: "Responses to a simulated strength training experiment."
+ set.seed(100)
+
+n <- 25
+ 
+pre  <-  rnorm(n, 100, 25)
+post <-  rnorm(n, 105, 25)
+
+xfactor <- rnorm(n, post-pre)
+
+dat <- data.frame(pre, post) %>%
+  mutate(participant = paste0("I", 1:n), 
+       change = 100* ((post - pre) /pre), 
+       participant = fct_reorder(participant, change))
+
+p1 <- dat %>%
+  pivot_longer(cols = pre:post, names_to = "time", values_to = "outcome") %>%
+  mutate(time = factor(time, levels = c("pre", "post"))) %>%
+  ggplot(aes(time, outcome, group = participant, color = change)) + 
+  geom_point() + geom_line() + 
+  theme(panel.grid = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position = "none") + 
+  labs(y = "Outcome", 
+       x = "Time")
+
+
+
+p2 <- dat %>%
+  ggplot(aes(participant, change, fill = change)) +
+  geom_bar(stat = "identity") +
+  theme(panel.grid = element_blank(), 
+        axis.text.x = element_blank())
+
+library(patchwork)
+
+p1 | p2
+
+```
+
+## What if they do respond differently?
+
+- What should be the consequence of this knowledge?
+
+
+
+## What if they do not respond differently?
+
+- What should be the consequence of this knowledge?
+
+## Comparing variation ($V$)
+
+\begin{align}
+SD_I &= \text{Random V} + \text{Intra-individual V} + \text{Inter-individual V} \\
+SD_C &= \text{Random V}
+\end{align}
+
+## 
+
+```{r}
+#| fig-cap: "Including a control group gives no indication of additional variation between individuals due to the intervention"
+
+n <- 25
+ 
+pre  <-  rnorm(n, 100, 25)
+post <-  rnorm(n, 105, 25)
+
+prec <- rnorm(n, 100, 25)
+postc <- rnorm(n, 100, 25)
+
+
+xfactor <- rnorm(n, post-pre)
+
+dat <- data.frame(pre = c(pre, prec), post = c(post, postc)) %>%
+  mutate(participant = c(paste0("I", 1:n), paste0("C", 1:n)),
+         group = rep(c("I", "C"), each = n),
+       change = 100* ((post - pre) /pre), 
+       participant = fct_reorder(participant, change))
+
+p1 <- dat %>%
+  pivot_longer(cols = pre:post, names_to = "time", values_to = "outcome") %>%
+  mutate(time = factor(time, levels = c("pre", "post"))) %>%
+  ggplot(aes(time, outcome, group = participant, color = change)) + 
+  geom_point() + geom_line() + 
+  theme(panel.grid = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position = "none") + 
+  labs(y = "Outcome", 
+       x = "Time") + facet_wrap(~ group, ncol = 2)
+
+
+
+p2 <- dat %>%
+  ggplot(aes(participant, change, fill = change)) +
+  geom_bar(stat = "identity") +
+  theme(panel.grid = element_blank(), 
+        axis.text.x = element_blank()) + facet_wrap(~ group, ncol = 2)
+
+library(patchwork)
+
+p1
+
+```
+
+## 
+
+```{r}
+#| fig-cap: "Including a control group gives no indication of additional variation between individuals due to the intervention"
+
+p2
+```
+
+## Variation is a matter of perspective
+
+::: {.incremental}
+- A recent meta analysis concludes that both muscle hypertrophy and strength change is affected by between-participant variation
+
+- The same analysis also conclude that there is no additional variation due to the interventions!
+
+- Responders- /non-responders are a matter of active debate
+
+:::
+
+## Known causes explaining differences in responses to resistance training
+
+::: {.incremental}
+- Age is a known predictor for impaired responses to resistance training. 
+- Impaired responses are seen primarily in muscle hypertrophy, not in muscle strength or e.g. insulin sensitivity
+- Reduced muscle hypertrophy coincides with reduced ability to produce new ribosomes
+:::
+
+## Synthesis ribosomes as a mechanism of muscle hypertrophy
+
+
+
+<a title="Bensaccount at en.wikipedia, CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Protein translation" src="https://upload.wikimedia.org/wikipedia/commons/9/94/Protein_translation.gif"></a>
+
+
+## Training volume and ribosome biogenesis
+
+- Training volume, the number of sets, affects ribosome biogenes, and muscle growth
+
+- Hammarström, D., Øfsteng, S., Koll, L., Hanestadhaugen, M., Hollan, I., Apró, W., Whist, J. E., Blomstrand, E., Rønnestad, B. R., & Ellefsen, S. (2020). Benefits of higher resistance-training volume are related to ribosome biogenesis. https://doi.org/10.1113/JP278455
+
+
+
+##
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2020" src="https://physoc.onlinelibrary.wiley.com/cms/asset/a138188b-8080-45dd-9fa1-253533e637b8/tjp13925-fig-0004-m.jpg"></a>
+
+
+##
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2020" src="https://physoc.onlinelibrary.wiley.com/cms/asset/639439e8-fd2b-4546-86d5-b42e66d49b3b/tjp13925-fig-0002-m.jpg"></a>
+
+## 
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2020" src="https://physoc.onlinelibrary.wiley.com/cms/asset/01196764-8157-4e8c-abcd-d9e3539fe949/tjp13925-fig-0005-m.jpg"></a>
+
+
+
+## 
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2020" src="https://physoc.onlinelibrary.wiley.com/cms/asset/4d4665ea-a5b1-46b4-9113-f6faa356bef3/tjp13925-fig-0006-m.jpg"></a>
+
+
+## Ribosomal biogenesis is an early event in response to resistance training
+
+- Increased translational capacity enables protein synthesis and thus muscle hypertrophy
+
+Hammarström, D., Øfsteng, S. J., Jacobsen, N. B., Flobergseter, K. B., Rønnestad, B. R., & Ellefsen, S. (2022). Ribosome accumulation during early phase resistance training in humans. https://doi.org/10.1111/apha.13806
+
+
+## 
+
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2022" src="https://onlinelibrary.wiley.com/cms/asset/4b63315f-b4d6-4b5b-a587-ea2040f59163/apha13806-fig-0001-m.jpg"></a>
+
+
+##
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2022" src="https://onlinelibrary.wiley.com/cms/asset/98bf197b-1d38-4976-8f5e-a1037861d743/apha13806-fig-0002-m.jpg"></a>
+
+## 
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2022" src="https://onlinelibrary.wiley.com/cms/asset/2270be76-d85b-42cf-9f71-9d09d8dae1a4/apha13806-fig-0003-m.jpg"></a>
+
+
+##
+
+<a title="CC BY 3.0 &lt;https://creativecommons.org/licenses/by/3.0&gt;s" href="https://commons.wikimedia.org/wiki/File:Protein_translation.gif"><img width="128" alt="Hammarström et al. 2022" src="https://onlinelibrary.wiley.com/cms/asset/35f9842c-2a41-4765-949a-21f62b9bc9db/apha13806-fig-0004-m.jpg"></a>
+
+## Conclusions
+
+- Muscle mass and strength are targets for health promoting life-style interventions
+- Modifiable factors such as training and diet affects health trough muscle
+- Between-individual differences may provide opportunity for individualization of training
+- Ribosomal biogenesis is an example of biological mechanisms contributing to differences in training responses.
+
+
+
+
+

@@ -1,0 +1,27 @@
+project:
+  type: book
+  output-dir: docs
+  render:
+    - "*.qmd"
+    - "!presentations/"
+
+book:
+  title: "Lecture notes"
+  author: "Daniel Hammarström"
+  date: last-modified
+  chapters:
+    - index.qmd
+    - individual-responses.qmd
+    - summary.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: sandstone
+  pdf:
+    documentclass: scrreprt
+
+
+

@@ -1,0 +1,231 @@
+---
+title: "Individual responses to resistance training"
+subtitle: "Lecture notes"
+author: "Daniel Hammarström"
+bibliography: references.bib
+execute: 
+  warning: false
+  message: false
+  echo: false
+---
+
+```{r}
+#| echo: false
+
+# Contains some settings to start up R code
+
+```
+
+> Updated on `r format(Sys.Date(), "%Y-%m-%d")`. Slides are available [here](presentations/ind-resp-res-train/ind-resp-res-train.html).
+
+Skeletal muscle is our largest organ primarily responsible interaction with our surrounding. Muscles also have important role in whole body metabolism evident from being the primary site for insulin-mediated glucose disposal and serving as a reservoir for body protein. Loss of the ability to dispose of glucose due to insulin resistance leads to Type 2 diabetes and subsequent diseases. Insufficient protein storage will affect the bodies ability to overcome stress such as disease, starvation or increased amounts of physical activity [@wolfe2006].
+
+The direct causal evidence for a link between muscle mass (or quality), muscle strength and mortality or physical independence is not completely understood. For the sake of discussion, the figure below shows a tentative model for the role of muscle mass or muscle quality, muscle strength and physical independence and mortality. For evidence of associations see e.g. [@li2018; @garcía-hermoso2018; @fukasawa2017; @miyake2019; @ruiz2008; @szulc2010; @abramowitz2018]
+
+```{r}
+#| fig-align: center
+
+library(ggdag); library(tidyverse)
+
+
+# A DAG for the role of muscle mass on outcome measures
+dag1 <- dagify(
+  # The form is effect ~ cause
+  M ~ A, 
+  A ~ Disease,
+  M ~ Diet,
+  M ~ Disease,
+  M ~ Age,
+  Disease ~ Age,
+  Diet ~ Age,
+  A ~ Diet,
+  A ~ Age,
+  M ~ Heritability,
+  S ~ Heritability,
+  A ~ Heritability,
+  S ~ Age,
+  Disease ~ Heritability,
+  S ~ M,
+  Ind ~ S,
+  S ~ A,
+  Ind ~ M,
+  Mort ~ M,
+  
+  
+  labels = c("M" = "Muscle mass", 
+             "A" = "Physical activity", 
+             "Age" = "Age",
+              "Diet" = "Diet",
+              "Disease" = "Disease",
+              "Age" = "Age",
+              "Heritability" = "Heritability",
+             "S" = "Muscle strength", 
+             "Ind" = "Physical independence",
+             "Mort" = "Mortality"
+             ),
+  # Optionally add coordinates to control the placement of the nodes on the DAG
+
+    coords = list(x = c(M = 2, S = 2.5,
+                        Diet = 1.75, Disease = 2.30, Age = 2, Heritability = 2.5, A = 2.15, 
+                        Ind = 1.9, Mort = 2.25), 
+                        y = c(M = 1, S = 0.7,
+                        Diet = 2.25, Disease = 2.25, Age = 3, Heritability = 3, A = 1.75, 
+                        Ind = 0.2, Mort = 0.2))
+  
+  
+)
+
+
+# Plot the dag called chain and print it to the screen
+p <- ggdag(dag1, use_labels = NULL, text = FALSE, edge_type = "diagonal", stylized = TRUE)
+
+p +
+  geom_label(aes(label = label)) +
+  
+  theme_dag()
+
+
+
+```
+
+Body composition, including lean mass and muscle strength are to a large degree heritable [@roth2012]. Studies show heritability scores for both strength and lean body mass explained approaching 50% (e.g. [@arden1997].)
+
+```{r}
+#| fig-cap: "Heritability of measures of strength and muscle mass. Data from @arden1997."
+library(tidyverse)
+
+## Data from Arden
+data.frame(Trait = c("Grip strength", "Leg extensor strength", "Lean body mass"), 
+           Heritability = c(0.36, 0.60, 0.56), 
+           lwr = c(0.03, 0.12, 0.24), 
+           upr = c(0.69, 1.08, 0.88)) %>%
+  ggplot(aes(Heritability, Trait)) + geom_point() + 
+  geom_errorbarh(aes(xmin = lwr, xmax = upr), height = 0) + 
+  theme(panel.grid = element_blank(), 
+        axis.title.y = element_blank()) 
+
+
+```
+
+Genetic factors attributable for the heritability of muscle strength and mass have been isolated in association studies with genetic polymorphism. Candidate genes include variation in *thyrotropin-releasing hormone receptor*, which is involved in the growth-hormone IGF-axis, ACTN3 which is involved in muscle contraction[@roth2012; @pickering2017]. Many more candidates are still to be replicated in future studies.
+
+Genetic factors likely contribute to continuous traits such as muscle mass or muscle strength in an additive or multiplicative manner. This means that when we observe muscle mass in the population, genetic influences have been added together to produce the observed trait. A single polymorphism will not explain all the variation in for example muscle mass.
+
+Although a large part of the variation in muscle mass and strength are due to genetic factors, environmental factors, including modifiable components such as life-style factors leaves us with a window of opportunity. Physical training, together with a healthy diet, will lead to changes in muscle mass and muscle strength [@steele2023; @polito2021]. Presumably, other factors will also change leading to an observed association between performing physical activity in the form of muscle strengthening activities and mortality [@patel2020; @coleman2022].
+
+From a public health perspective, guidelines to maintain health should, [and do](https://www.who.int/publications/i/item/9789240014886) contain recomendations for physical activity, including strength training. There is enough evidence for including strength training for healthy populations and many patient populations. However, is there room for improvements in guidelines?
+
+When engaging in e.g. strength training we could expect that not everyone responded similarly. We might expect a scenario displayed in the figure below where some individuals are classified as responders and some are classified non-responders.
+
+```{r}
+#| fig-cap: "Responses to a simulated strength training experiment."
+ set.seed(100)
+
+n <- 25
+ 
+pre  <-  rnorm(n, 100, 25)
+post <-  rnorm(n, 105, 25)
+
+xfactor <- rnorm(n, post-pre)
+
+dat <- data.frame(pre, post) %>%
+  mutate(participant = paste0("I", 1:n), 
+       change = 100* ((post - pre) /pre), 
+       participant = fct_reorder(participant, change))
+
+p1 <- dat %>%
+  pivot_longer(cols = pre:post, names_to = "time", values_to = "outcome") %>%
+  mutate(time = factor(time, levels = c("pre", "post"))) %>%
+  ggplot(aes(time, outcome, group = participant, color = change)) + 
+  geom_point() + geom_line() + 
+  theme(panel.grid = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position = "none") + 
+  labs(y = "Outcome", 
+       x = "Time")
+
+
+
+p2 <- dat %>%
+  ggplot(aes(participant, change, fill = change)) +
+  geom_bar(stat = "identity") +
+  theme(panel.grid = element_blank(), 
+        axis.text.x = element_blank())
+
+library(patchwork)
+
+p1 | p2
+
+
+```
+
+Do this prove that some individuals will, systematically, respond better to a intervention than others? Is there evidence for intra-individual variation in treatment responses?
+
+In this situation we do not have enough data! We cannot tell if differences between individuals are due to differences between theme (genetics, life style, etc.) or due to random variation. We want to know if the act of being treated induce larger variation between individuals compared to not being included in an intervention. The variation in response to a training intervention ($SD_I$) includes
+
+```{=tex}
+\begin{align}
+SD_I &= \text{Random variation} + \text{Intra-individual variation} + \text{Inter-individual variation} \\
+SD_C &= \text{Random variation}
+\end{align}
+```
+We want to compare with a non-training control group to compare $SD_I$ with $SD_C$.
+
+```{r}
+#| fig-cap: "Including a control group gives no indication of additional variation between individuals due to the intervention"
+
+n <- 25
+ 
+pre  <-  rnorm(n, 100, 25)
+post <-  rnorm(n, 105, 25)
+
+prec <- rnorm(n, 100, 25)
+postc <- rnorm(n, 100, 25)
+
+
+xfactor <- rnorm(n, post-pre)
+
+dat <- data.frame(pre = c(pre, prec), post = c(post, postc)) %>%
+  mutate(participant = c(paste0("I", 1:n), paste0("C", 1:n)),
+         group = rep(c("I", "C"), each = n),
+       change = 100* ((post - pre) /pre), 
+       participant = fct_reorder(participant, change))
+
+p1 <- dat %>%
+  pivot_longer(cols = pre:post, names_to = "time", values_to = "outcome") %>%
+  mutate(time = factor(time, levels = c("pre", "post"))) %>%
+  ggplot(aes(time, outcome, group = participant, color = change)) + 
+  geom_point() + geom_line() + 
+  theme(panel.grid = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position = "none") + 
+  labs(y = "Outcome", 
+       x = "Time") + facet_wrap(~ group, ncol = 2)
+
+
+
+p2 <- dat %>%
+  ggplot(aes(participant, change, fill = change)) +
+  geom_bar(stat = "identity") +
+  theme(panel.grid = element_blank(), 
+        axis.text.x = element_blank()) + facet_wrap(~ group, ncol = 2)
+
+library(patchwork)
+
+p1 / p2
+
+
+
+```
+
+In a scenario where there is no or very little evidence for extra variation due to the intervention, the intervention should be generally recommended. In a scenario where we have a large degree of extra variation between individuals due to the intervention there might actually exists individuals that will not systematically benefit from the intervention. This leaves us with an opportunity to individualize intervention.
+
+A recent meta-analyses concludes that strength training induces variation between individuals that is due to the intervention for both muscle strength and muscle hypertrophy outcomes [@steele2023]. However when accounting for a potential statistical artifact, it seems that resistance training decrease the variation between individuals [@steele2023]. The identification and potential implication of non-responders to resistance training is a matter of debate[@atkinson2015].
+
+To known causes of between-participant variation in responses to we find age. Older individuals respond to a lesser degree with muscle hypertrophy when compared to younger after standardized strength training [@phillips2017; @brook2016]. However, relative magintudes of increased strength are similar in older and glucose sensitivity may change in old but not in young individuals [@phillips2017]. A key aspect limiting the response to resistance training is the process of ribosomal biogenesis. Older individuals seem to have a reduced capability to synthesize ribosomes compared young individuals [@brook2016].
+
+From a mechanistic perspective the amount of ribosomes affects the muscle cells ability to produce new proteins [@millward1973]. *Translational capacity* refers to the capacity to translate mRNA to proteins which is limited by the amount and efficiency of ribosomes. As such, markers of ribosomal density has been used as a explanatory variable for between-individual variation seen in response to resistance training [@stec2015; @stec2016; @hammarström2020; @hammarström2022; @Figueiredo2015-05-1210.1152/ajpendo.00050.2015]. It turns out that the rate of increase in ribosomal density is affected by training volume, coinciding with differences in attained muscle mass [@hammarström2020]. However, ribosomal biogenesis is an early event in response to repeated resistance training bouts, peaking after about eight sessions performed with constant volume but progressive intensity [@hammarström2022]. This has consequences for the design of studies aimed to investigate response heterogeneity.
+
+Other molecular markers have been proposed as predictors for training outcomes. Studies using large data sets representing the whole, or a large part of the transcriptome, have utilized two different strategies. We could investigate the transcriptional landscape prior to training and ask questions about what profiles associates with positive responses. We could also investigate the change in e.g., muscle mass and look for associations in changes of transcriptional profiles. @stokes2020 reports a impressive study where individual changes in response to resistance training was associated with molecular profiles built from a large transcriptome data set and found several targets that where validated in cell culture experiments. On the other hand, @thalacker-mercer2013 identified a "primed" profile before training that responded to a larger degree than individuals who did not respond. Low responses were associated with inflammatory markers.
